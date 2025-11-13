@@ -1,38 +1,32 @@
 import streamlit as st
-from langchain_community.vectorstores import Chroma
+from langchain_community.vectorstores import FAISS
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain.text_splitter import CharacterTextSplitter
 import os
 
-# Title
 st.title("Company Policy Q&A Bot")
 
-# Load policy files
-policy_folder = "."
+# Load all .txt files from the folder
 texts = []
-for file in os.listdir(policy_folder):
+for file in os.listdir("."):
     if file.endswith(".txt"):
-        with open(os.path.join(policy_folder, file), "r", encoding="utf-8") as f:
+        with open(file, "r", encoding="utf-8") as f:
             texts.append(f.read())
 
 if not texts:
-    st.write("No policy files found. Add .txt files to this folder.")
+    st.write("No .txt policy files found. Add them to this folder!")
 else:
-    # Split text
-    text_splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=50)
-    docs = text_splitter.create_documents(texts)
+    # Split text into chunks and create embeddings
+    splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+    docs = splitter.create_documents(texts)
+    embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")  # Fast, free model
+    db = FAISS.from_documents(docs, embeddings)
 
-    # Create vector store
-    embedding = HuggingFaceEmbeddings()
-    vectordb = Chroma.from_documents(docs, embedding)
-
-    # Question input
+    # User asks a question
     question = st.text_input("Ask a policy question:")
-
     if question:
-        # Search
-        results = vectordb.similarity_search(question, k=1)
+        results = db.similarity_search(question, k=1)
         if results:
-            st.success(f"**Answer:** {results[0].page_content}")
+            st.success(f"**Answer:**\n\n{results[0].page_content}")
         else:
-            st.error("No answer found.")
+            st.error("No matching policy found. Try rephrasing!")
