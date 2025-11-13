@@ -1,4 +1,7 @@
+cat > requirements.txt << EOF
 streamlit
 langchain
+langchain-community
 faiss-cpu
 sentence-transformers
+EOF
